@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { env } from './env';
+import { env, awsRegion } from './env';
 import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
@@ -18,7 +18,7 @@ import {
 // Note what has NO account here: the senior. She never types a credential,
 // ever. See the pairing-code design.
 
-const REGION = env('AWS_REGION');
+const REGION = awsRegion();
 const CLIENT_ID = env('COGNITO_CLIENT_ID');
 const CLIENT_SECRET = env('COGNITO_CLIENT_SECRET');
 
@@ -147,4 +147,3 @@ export function readableAuthError(err: unknown): string {
       return 'Something went wrong at our end. Try again in a moment.';
   }
 }
-

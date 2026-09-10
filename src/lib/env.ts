@@ -9,7 +9,6 @@ export const REQUIRED_ENV = [
   'COGNITO_USER_POOL_ID',
   'COGNITO_CLIENT_ID',
   'COGNITO_CLIENT_SECRET',
-  'AWS_REGION',
   'LISA_API_URL',
 ] as const;
 
@@ -28,6 +27,15 @@ export function env(name: (typeof REQUIRED_ENV)[number]): string {
     throw new Error(`Missing env var ${name} — see .env.example`);
   }
   return value;
+}
+
+// NOT in REQUIRED_ENV: AWS_* is a reserved prefix on Amplify Hosting (and on
+// Lambda, which its SSR compute runs on), so it can never be set as a normal
+// environment variable there — trying to add one in the Amplify console is
+// rejected outright. This app only ever deploys to one region, so that region
+// is the default rather than something every deploy has to configure.
+export function awsRegion(): string {
+  return process.env.AWS_REGION?.trim() || 'us-east-1';
 }
 
 // Stripe is NOT in REQUIRED_ENV / missingEnv() above: those gate the whole
