@@ -52,7 +52,13 @@ export async function createLink(input: {
     cache: 'no-store',
   });
   if (res.status === 429) throw new CircleError('too_many_open_codes');
-  if (!res.ok) throw new CircleError('failed');
+  if (!res.ok) {
+    // TEMPORARY DIAGNOSTIC (2026-09-10): capture the real status + body so
+    // the UI can show it instead of the generic fallback message — remove
+    // once the "Get her code" failure is root-caused. See readableCircleError.
+    const bodyText = await res.text().catch(() => '');
+    throw new CircleError(`failed:${res.status}:${bodyText.slice(0, 300)}`);
+  }
   return res.json();
 }
 
@@ -210,5 +216,12 @@ export function readableCircleError(err: unknown): string {
   if (err instanceof CircleError && err.message === 'not_connected') {
     return "You'll be able to do that once she's confirmed the connection.";
   }
-  return 'Something went wrong at our end. Nothing has changed — please try again in a moment.';
+  const base = 'Something went wrong at our end. Nothing has changed — please try again in a moment.';
+  // TEMPORARY DIAGNOSTIC (2026-09-10): appends the real status/body captured
+  // in createLink above so we can see why the backend call failed without
+  // digging through CloudWatch. Remove this suffix once root-caused.
+  if (err instanceof CircleError && err.message.startsWith('failed:')) {
+    return `${base} [debug: ${err.message}]`;
+  }
+  return base;
 }
