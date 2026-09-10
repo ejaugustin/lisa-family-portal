@@ -18,7 +18,12 @@ export async function signInAction(_prev: FormState, form: FormData): Promise<Fo
     if ((err as { name?: string })?.name === 'UserNotConfirmedException') {
       redirect(`/verify?email=${encodeURIComponent(email)}`);
     }
-    return { error: cognito.readableAuthError(err) };
+    // TEMPORARY DIAGNOSTIC (2026-09-10): appends the raw error so we can see
+    // what's actually failing in production, since Amplify isn't surfacing
+    // CloudWatch logs for this app. Remove the [debug: ...] suffix once the
+    // sign-in crash is diagnosed and fixed.
+    const debug = err instanceof Error ? err.message : JSON.stringify(err);
+    return { error: `${cognito.readableAuthError(err)} [debug: ${debug}]` };
   }
   redirect('/dashboard');
 }

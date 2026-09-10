@@ -14,11 +14,21 @@ import type { Tokens } from './cognito';
 const ID_COOKIE = 'lisa_id';
 const RT_COOKIE = 'lisa_rt';
 
-const verifier = CognitoJwtVerifier.create({
-  userPoolId: env('COGNITO_USER_POOL_ID'),
-  tokenUse: 'id',
-  clientId: env('COGNITO_CLIENT_ID'),
-});
+// DIAGNOSTIC (2026-09-10): built lazily, on first use, instead of at module
+// load — see the note in cognito.ts. A bad COGNITO_USER_POOL_ID/CLIENT_ID
+// used to throw the moment this file was imported, crashing the whole
+// request before any try/catch could run.
+let cachedVerifier: ReturnType<typeof CognitoJwtVerifier.create> | null = null;
+function verifier() {
+  if (!cachedVerifier) {
+    cachedVerifier = CognitoJwtVerifier.create({
+      userPoolId: env('COGNITO_USER_POOL_ID'),
+      tokenUse: 'id',
+      clientId: env('COGNITO_CLIENT_ID'),
+    });
+  }
+  return cachedVerifier;
+}
 
 export type Caregiver = { sub: string; email: string; name: string };
 
@@ -54,7 +64,7 @@ export async function currentCaregiver(): Promise<Caregiver | null> {
 
   if (idToken) {
     try {
-      const claims = await verifier.verify(idToken);
+      const claims = await verifier().verify(idToken);
       return {
         sub: String(claims.sub),
         email: String(claims.email ?? ''),
@@ -76,7 +86,7 @@ export async function currentCaregiver(): Promise<Caregiver | null> {
 
   try {
     const tokens = await refresh(refreshToken, sub);
-    const claims = await verifier.verify(tokens.idToken);
+    const claims = await verifier().verify(tokens.idToken);
     const jar2 = await cookies();
     jar2.set(ID_COOKIE, tokens.idToken, { ...COOKIE_BASE, maxAge: 60 * 60 });
     return {

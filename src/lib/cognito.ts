@@ -17,25 +17,41 @@ import {
 //
 // Note what has NO account here: the senior. She never types a credential,
 // ever. See the pairing-code design.
+//
+// DIAGNOSTIC (2026-09-10): config is read lazily inside a function instead of
+// at module load time. A module-level `env()` throw fires the instant this
+// file is imported — which happens before signInAction's own try/catch ever
+// runs — so any misconfiguration crashed the whole page with no readable
+// message. Reading it lazily means a bad value surfaces as a normal caught
+// error instead of an opaque "Application error" page.
+function config() {
+  return {
+    region: awsRegion(),
+    clientId: env('COGNITO_CLIENT_ID'),
+    clientSecret: env('COGNITO_CLIENT_SECRET'),
+  };
+}
 
-const REGION = awsRegion();
-const CLIENT_ID = env('COGNITO_CLIENT_ID');
-const CLIENT_SECRET = env('COGNITO_CLIENT_SECRET');
-
-const client = new CognitoIdentityProviderClient({ region: REGION });
+let cachedClient: CognitoIdentityProviderClient | null = null;
+function client(): CognitoIdentityProviderClient {
+  if (!cachedClient) cachedClient = new CognitoIdentityProviderClient({ region: config().region });
+  return cachedClient;
+}
 
 /** Confidential client: Cognito wants proof the caller holds the secret. */
 function secretHash(username: string): string {
-  return createHmac('sha256', CLIENT_SECRET).update(username + CLIENT_ID).digest('base64');
+  const { clientId, clientSecret } = config();
+  return createHmac('sha256', clientSecret).update(username + clientId).digest('base64');
 }
 
 export type Tokens = { idToken: string; accessToken: string; refreshToken?: string; expiresIn: number };
 
 export async function signIn(email: string, password: string): Promise<Tokens> {
-  const res = await client.send(
+  const { clientId } = config();
+  const res = await client().send(
     new InitiateAuthCommand({
       AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: CLIENT_ID,
+      ClientId: clientId,
       AuthParameters: {
         USERNAME: email,
         PASSWORD: password,
@@ -59,10 +75,11 @@ export async function signIn(email: string, password: string): Promise<Tokens> {
  * if you use the email here.
  */
 export async function refresh(refreshToken: string, sub: string): Promise<Tokens> {
-  const res = await client.send(
+  const { clientId } = config();
+  const res = await client().send(
     new InitiateAuthCommand({
       AuthFlow: 'REFRESH_TOKEN_AUTH',
-      ClientId: CLIENT_ID,
+      ClientId: clientId,
       AuthParameters: { REFRESH_TOKEN: refreshToken, SECRET_HASH: secretHash(sub) },
     }),
   );
@@ -72,9 +89,10 @@ export async function refresh(refreshToken: string, sub: string): Promise<Tokens
 }
 
 export async function signUp(email: string, password: string, fullName: string): Promise<void> {
-  await client.send(
+  const { clientId } = config();
+  await client().send(
     new SignUpCommand({
-      ClientId: CLIENT_ID,
+      ClientId: clientId,
       Username: email,
       Password: password,
       SecretHash: secretHash(email),
@@ -87,9 +105,10 @@ export async function signUp(email: string, password: string, fullName: string):
 }
 
 export async function confirmSignUp(email: string, code: string): Promise<void> {
-  await client.send(
+  const { clientId } = config();
+  await client().send(
     new ConfirmSignUpCommand({
-      ClientId: CLIENT_ID,
+      ClientId: clientId,
       Username: email,
       ConfirmationCode: code,
       SecretHash: secretHash(email),
@@ -98,21 +117,24 @@ export async function confirmSignUp(email: string, code: string): Promise<void> 
 }
 
 export async function resendCode(email: string): Promise<void> {
-  await client.send(
-    new ResendConfirmationCodeCommand({ ClientId: CLIENT_ID, Username: email, SecretHash: secretHash(email) }),
+  const { clientId } = config();
+  await client().send(
+    new ResendConfirmationCodeCommand({ ClientId: clientId, Username: email, SecretHash: secretHash(email) }),
   );
 }
 
 export async function startPasswordReset(email: string): Promise<void> {
-  await client.send(
-    new ForgotPasswordCommand({ ClientId: CLIENT_ID, Username: email, SecretHash: secretHash(email) }),
+  const { clientId } = config();
+  await client().send(
+    new ForgotPasswordCommand({ ClientId: clientId, Username: email, SecretHash: secretHash(email) }),
   );
 }
 
 export async function finishPasswordReset(email: string, code: string, password: string): Promise<void> {
-  await client.send(
+  const { clientId } = config();
+  await client().send(
     new ConfirmForgotPasswordCommand({
-      ClientId: CLIENT_ID,
+      ClientId: clientId,
       Username: email,
       ConfirmationCode: code,
       Password: password,
