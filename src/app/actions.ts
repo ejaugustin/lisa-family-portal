@@ -3,8 +3,21 @@
 import { redirect } from 'next/navigation';
 import * as cognito from '@/lib/cognito';
 import { clearSession, setSession } from '@/lib/session';
+import { REQUIRED_ENV } from '@/lib/env';
 
 export type FormState = { error?: string; notice?: string };
+
+// TEMPORARY DIAGNOSTIC (2026-09-10): reports, without revealing any actual
+// secret value, which of the required runtime env vars this specific
+// invocation of the server action can see. Remove once the sign-in crash is
+// diagnosed and fixed — see the [debug: ...] suffix below.
+function envReport(): string {
+  return REQUIRED_ENV.map((name) => {
+    const value = process.env[name];
+    if (!value) return `${name}=MISSING`;
+    return `${name}=set(len ${value.length}${value.includes('xxxx') ? ', contains xxxx' : ''})`;
+  }).join(', ');
+}
 
 export async function signInAction(_prev: FormState, form: FormData): Promise<FormState> {
   const email = String(form.get('email') ?? '').trim().toLowerCase();
@@ -18,12 +31,8 @@ export async function signInAction(_prev: FormState, form: FormData): Promise<Fo
     if ((err as { name?: string })?.name === 'UserNotConfirmedException') {
       redirect(`/verify?email=${encodeURIComponent(email)}`);
     }
-    // TEMPORARY DIAGNOSTIC (2026-09-10): appends the raw error so we can see
-    // what's actually failing in production, since Amplify isn't surfacing
-    // CloudWatch logs for this app. Remove the [debug: ...] suffix once the
-    // sign-in crash is diagnosed and fixed.
     const debug = err instanceof Error ? err.message : JSON.stringify(err);
-    return { error: `${cognito.readableAuthError(err)} [debug: ${debug}]` };
+    return { error: `${cognito.readableAuthError(err)} [debug: ${debug} | env: ${envReport()}]` };
   }
   redirect('/dashboard');
 }
