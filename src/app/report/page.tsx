@@ -2,7 +2,8 @@
 
 import { useActionState } from 'react';
 import Link from 'next/link';
-import { REASONS, submitReportAction, type ReportState } from './actions';
+import { submitReportAction } from './actions';
+import { REASONS, type ReportState } from './reasons';
 
 const initial: ReportState = {};
 

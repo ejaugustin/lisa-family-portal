@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { currentCaregiver } from '@/lib/session';
-import { REASONS } from '../actions';
+import { REASONS } from '../reasons';
 
 export default async function ReportSent({
   searchParams,

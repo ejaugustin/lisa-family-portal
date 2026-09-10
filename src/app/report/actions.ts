@@ -2,15 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { currentCaregiver } from '@/lib/session';
-
-export type ReportState = { error?: string };
-
-export const REASONS = [
-  { id: 'moved-into-care', label: 'She has moved into care' },
-  { id: 'family-wishes-stop', label: 'The family would like to stop' },
-  { id: 'deceased', label: 'She has passed away' },
-  { id: 'something-else', label: 'Something else' },
-] as const;
+import type { ReportState } from './reasons';
 
 export async function submitReportAction(_prev: ReportState, form: FormData): Promise<ReportState> {
   if (!(await currentCaregiver())) redirect('/sign-in');
