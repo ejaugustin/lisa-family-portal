@@ -7,16 +7,24 @@ import { REQUIRED_ENV } from '@/lib/env';
 
 export type FormState = { error?: string; notice?: string };
 
-// TEMPORARY DIAGNOSTIC (2026-09-10): reports, without revealing any actual
-// secret value, which of the required runtime env vars this specific
-// invocation of the server action can see. Remove once the sign-in crash is
-// diagnosed and fixed — see the [debug: ...] suffix below.
+// TEMPORARY DIAGNOSTIC (2026-09-10, expanded): reports, without revealing any
+// actual secret value, which of the required runtime env vars this specific
+// invocation of the server action can see — plus, since CloudWatch never
+// shows a single log line for this app's compute no matter what we've tried,
+// a count of ALL env var names present at runtime and a list of any key
+// names that loosely match what we expect (catches casing/prefix surprises).
+// Remove this whole diagnostic once the sign-in crash is fixed.
 function envReport(): string {
-  return REQUIRED_ENV.map((name) => {
+  const required = REQUIRED_ENV.map((name) => {
     const value = process.env[name];
     if (!value) return `${name}=MISSING`;
     return `${name}=set(len ${value.length}${value.includes('xxxx') ? ', contains xxxx' : ''})`;
   }).join(', ');
+
+  const allKeys = Object.keys(process.env);
+  const relevantKeys = allKeys.filter((k) => /COGNITO|LISA|STRIPE|AMPLIFY/i.test(k));
+
+  return `${required} | totalEnvVars=${allKeys.length} | relevantKeys=[${relevantKeys.join(',')}]`;
 }
 
 export async function signInAction(_prev: FormState, form: FormData): Promise<FormState> {
