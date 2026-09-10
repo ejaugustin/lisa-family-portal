@@ -1,26 +1,20 @@
 'use client';
 
-import { useActionState } from 'react';
+import { Suspense, useActionState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { reportLostPhoneAction, type LostPhoneState } from './actions';
 
 const initial: LostPhoneState = {};
 
-// LISA-ID-002, Layer 3 — reached from the dashboard's connected card. This
-// is a deliberately weighty confirmation, not a casual click: submitting it
-// immediately stops every phone on her household from working, including
-// hers, if it turns out not to actually be lost.
-export default function LostPhone({ searchParams }: { searchParams: { linkId?: string; her?: string } }) {
+function LostPhoneForm() {
+  const searchParams = useSearchParams();
   const [state, action, pending] = useActionState(reportLostPhoneAction, initial);
-  const her = searchParams.her ?? 'She';
-  const linkId = searchParams.linkId ?? '';
+  const her = searchParams.get('her') ?? 'She';
+  const linkId = searchParams.get('linkId') ?? '';
 
   return (
-    <main className="shell">
-      <Link href="/dashboard" className="wordmark">
-        Lisa <span>&amp; Me</span>
-      </Link>
-
+    <>
       <div className="card">
         <h1>{her}&rsquo;s phone was lost</h1>
         <p>
@@ -56,6 +50,24 @@ export default function LostPhone({ searchParams }: { searchParams: { linkId?: s
       <p className="footnote">
         <Link href="/dashboard">Back to your dashboard</Link>
       </p>
+    </>
+  );
+}
+
+// LISA-ID-002, Layer 3 — reached from the dashboard's connected card. This
+// is a deliberately weighty confirmation, not a casual click: submitting it
+// immediately stops every phone on her household from working, including
+// hers, if it turns out not to actually be lost.
+export default function LostPhone() {
+  return (
+    <main className="shell">
+      <Link href="/dashboard" className="wordmark">
+        Lisa <span>&amp; Me</span>
+      </Link>
+
+      <Suspense fallback={null}>
+        <LostPhoneForm />
+      </Suspense>
     </main>
   );
 }
