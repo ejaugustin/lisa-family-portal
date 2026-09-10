@@ -20,11 +20,23 @@ export type BillingState = { error?: string };
  * `lisa_billing` never got set, so the caregiver bounced back to
  * /billing/start looking stuck. Fall back to NODE_ENV instead of a bare
  * default so dev keeps working without touching the trusted-header path.
+ *
+ * HOST FIX (2026-09-10): on Amplify Hosting's WEB_COMPUTE compute, the plain
+ * `host` header Next.js sees is the internal bind address the Lambda proxy
+ * forwards requests to (`localhost:3000`), not the public hostname — the
+ * real one arrives as `x-forwarded-host`. Using bare `host` built
+ * `https://localhost:3000/...` success_urls in production itself, not just
+ * locally: the card saved fine on Stripe's side, but the return redirect hit
+ * a server that doesn't exist, `lisa_billing` never got set, and the
+ * caregiver was sent back to /billing/start on every single visit —
+ * indistinguishable from Stripe "not remembering" the card. `x-forwarded-host`
+ * is checked first now; bare `host` is still the fallback for local dev,
+ * where nothing sets `x-forwarded-host`.
  */
 async function origin(): Promise<string> {
   const h = await headers();
   const proto = h.get('x-forwarded-proto') ?? (process.env.NODE_ENV === 'production' ? 'https' : 'http');
-  const host = h.get('host');
+  const host = h.get('x-forwarded-host') ?? h.get('host');
   return `${proto}://${host}`;
 }
 
