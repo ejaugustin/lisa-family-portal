@@ -142,6 +142,13 @@ export type EscalationEvent = {
   resolvedAt: string | null;
   resolvedBy: 'contact_resumed' | 'manual' | null;
   outcome: string | null;
+  /**
+   * LISA-SAFETY-002 — the real, generated plain-language sentence for this
+   * event, computed server-side (backend's shared/escalation.ts). Replaces
+   * the old client-side per-tier lookup table in alerts/page.tsx.
+   */
+  reasoningText: string;
+  hoursSinceContact: number;
 };
 
 export async function listAlerts(linkId: string): Promise<EscalationEvent[]> {
