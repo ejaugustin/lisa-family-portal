@@ -3,8 +3,11 @@ import { redirect } from 'next/navigation';
 import { currentCaregiver } from '@/lib/session';
 import { PortalNav } from '../_components/PortalNav';
 import { startBillingAction } from '../billing/actions';
+import { listLinks } from '@/lib/circle';
+import { safetyContactRequest, type SafetyContact } from '@/lib/safety-contacts';
+import { SafetyContactForm } from './SafetyContactForm';
 
-// alertSensitivity, phone verification and the senior's visibility flags all
+// alertSensitivity and the senior's visibility flags
 // come from data this portal can't reach yet (no field on Caregiver, no
 // endpoint in circle.ts) — shown here as real, decided policy rather than
 // interactive controls that would silently do nothing. What IS real: the
@@ -24,6 +27,14 @@ const SENSITIVITY = [
 export default async function Settings() {
   const caregiver = await currentCaregiver();
   if (!caregiver) redirect('/sign-in');
+  const safetyContacts: Array<{ linkId: string; seniorName: string; contact: SafetyContact }> = [];
+  let safetyError = '';
+  try {
+    for (const link of (await listLinks()).filter(link => link.status === 'connected')) {
+      const result = await safetyContactRequest(link.linkId);
+      if (result.contact) safetyContacts.push({ linkId: link.linkId, seniorName: link.seniorName, contact: result.contact });
+    }
+  } catch { safetyError = 'Safety-contact settings are unavailable. Please try again later.'; }
 
   return (
     <>
@@ -53,6 +64,9 @@ export default async function Settings() {
             caregiver gets the middle option.
           </p>
         </div>
+
+        {safetyContacts.map(item => <SafetyContactForm key={item.linkId} linkId={item.linkId} seniorName={item.seniorName} initial={item.contact} />)}
+        {safetyError ? <p role="alert">{safetyError}</p> : safetyContacts.length === 0 ? <p className="muted">No safety-contact assignment yet. The senior can assign your connected caregiver account in My People.</p> : null}
 
         <div className="card">
           <h2>Your account</h2>
