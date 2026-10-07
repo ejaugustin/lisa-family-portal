@@ -34,6 +34,9 @@ async function run() {
   actor = { sub: 'verified-caregiver' };
   assert.equal((await safetyContactAction('link', previous, form)).contact.smsConsent, true);
   assert.equal(calls, 1);
+  const ui = fs.readFileSync(path.join(__dirname, 'SafetyContactForm.tsx'), 'utf8');
+  assert.ok(ui.indexOf('role="status"') < ui.indexOf('Send verification text'), 'Save feedback must be beside consent, not below verification forms.');
+  assert.ok(ui.includes("pending ? 'Saving...' : 'Save my consent'"));
   const response = { next: () => ({ kind: 'next' }), redirect: url => ({ kind: 'redirect', path: url.pathname }) };
   const { middleware } = load('../../middleware.ts', { 'next/server': { NextResponse: response } });
   function request(method, action, pathname = '/settings') {

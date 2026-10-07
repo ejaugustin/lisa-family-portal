@@ -24,8 +24,11 @@ export function SafetyContactForm({ linkId, seniorName, initial }: { linkId: str
         <legend>Your notification consent</legend>
         <label style={{ display: 'flex', gap: 12, alignItems: 'start', margin: '16px 0' }}><input style={{ width: 'auto' }} type="checkbox" name="smsConsent" defaultChecked={contact.smsConsent} />I agree to receive Lisa &amp; Me safety texts for this household at the number above. Message and data rates may apply. I can withdraw consent here.</label>
         <label style={{ display: 'flex', gap: 12, alignItems: 'start', margin: '16px 0' }}><input style={{ width: 'auto' }} type="checkbox" name="pushConsent" defaultChecked={contact.pushConsent} />I agree to receive safety push notifications for this household.</label>
-        <button type="submit">Save my consent</button>
+        <button type="submit">{pending ? 'Saving...' : 'Save my consent'}</button>
       </fieldset>
+      {!pending && state.error ? <p role="alert">{state.error}</p> : null}
+      {!pending && state.signInRequired ? <Link href="/sign-in">Sign in again</Link> : null}
+      {!pending && state.message ? <p role="status" aria-live="polite" style={{ color: 'var(--ink)', fontWeight: 600 }}>{state.message}</p> : null}
     </form>
     {!contact.verifiedAt && contact.authorized && !contact.portalDetailsChanged ? <>
       <form action={action}>
@@ -38,9 +41,6 @@ export function SafetyContactForm({ linkId, seniorName, initial }: { linkId: str
         <button type="submit" disabled={pending}>Verify my number</button>
       </form>
     </> : null}
-    {state.error ? <p role="alert">{state.error}</p> : null}
-    {state.signInRequired ? <Link href="/sign-in">Sign in again</Link> : null}
-    {state.message ? <p role="status">{state.message}</p> : null}
     <p className="muted">{contact.smsSetupComplete ? 'SMS contact setup is confirmed.' : 'SMS setup still requires the number, role, household permission, requested channel, and your consent.'} Safety SMS escalation and caregiver push delivery are not enabled by this form. Recording and live-view permissions stay separate.</p>
   </section>;
 }
