@@ -12,6 +12,9 @@ export async function startLinkAction(_prev: ConnectState, form: FormData): Prom
 
   const seniorName = String(form.get('seniorName') ?? '').trim();
   if (!seniorName) return { error: 'Please tell us her name — just what you call her is fine.' };
+  const caregiverName = String(form.get('caregiverName') ?? '').trim();
+  const caregiverContactPhone = String(form.get('caregiverContactPhone') ?? '').trim();
+  if (!caregiverName || !caregiverContactPhone) return { error: 'Enter your name and mobile number so she can recognize your contact.' };
 
   // Everything except the name is optional and stays optional. A daughter
   // describing her mother to a system before her mother has agreed to any of
@@ -21,6 +24,8 @@ export async function startLinkAction(_prev: ConnectState, form: FormData): Prom
   try {
     issued = await createLink({
       seniorName,
+      caregiverName,
+      caregiverContactPhone,
       approxAge: String(form.get('approxAge') ?? '').trim() || undefined,
       livesAlone: String(form.get('livesAlone') ?? '').trim() || undefined,
     });

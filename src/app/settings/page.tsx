@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation';
 import { currentCaregiver } from '@/lib/session';
 import { PortalNav } from '../_components/PortalNav';
 import { startBillingAction } from '../billing/actions';
-import { listLinks } from '@/lib/circle';
+import { listLinks, type CircleLink } from '@/lib/circle';
 import { safetyContactRequest, type SafetyContact } from '@/lib/safety-contacts';
 import { SafetyContactForm } from './SafetyContactForm';
+import { ContactDetailsForm } from './ContactDetailsForm';
 
 // alertSensitivity and the senior's visibility flags
 // come from data this portal can't reach yet (no field on Caregiver, no
@@ -29,8 +30,10 @@ export default async function Settings() {
   if (!caregiver) redirect('/sign-in');
   const safetyContacts: Array<{ linkId: string; seniorName: string; contact: SafetyContact }> = [];
   let safetyError = '';
+  let connectedLinks: CircleLink[] = [];
   try {
-    for (const link of (await listLinks()).filter(link => link.status === 'connected')) {
+    connectedLinks = (await listLinks()).filter(link => link.status === 'connected');
+    for (const link of connectedLinks) {
       const result = await safetyContactRequest(link.linkId);
       if (result.contact) safetyContacts.push({ linkId: link.linkId, seniorName: link.seniorName, contact: result.contact });
     }
@@ -59,13 +62,13 @@ export default async function Settings() {
             </div>
           ))}
           <p className="muted" style={{ marginBottom: 0 }}>
-            There&rsquo;s a floor you can&rsquo;t go below — however quiet you set this, a genuine
-            emergency still reaches you. Choosing between these is still being built; for now every
-            caregiver gets the middle option.
+            These notification preferences are not yet configurable. Safety SMS escalation and
+            caregiver push delivery are not active yet.
           </p>
         </div>
 
-        {safetyContacts.map(item => <SafetyContactForm key={item.linkId} linkId={item.linkId} seniorName={item.seniorName} initial={item.contact} />)}
+        {connectedLinks.map(link => <ContactDetailsForm key={link.linkId} link={link} fallbackName={caregiver.name || caregiver.email} />)}
+        {safetyContacts.map(item => <SafetyContactForm key={`${item.linkId}-${item.contact.phone}-${item.contact.portalDetailsChanged}`} linkId={item.linkId} seniorName={item.seniorName} initial={item.contact} />)}
         {safetyError ? <p role="alert">{safetyError}</p> : safetyContacts.length === 0 ? <p className="muted">No safety-contact assignment yet. The senior can assign your connected caregiver account in My People.</p> : null}
 
         <div className="card">

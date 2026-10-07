@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { env } from './env';
 
 export type SafetyContact = {
+  portalDetailsChanged?: boolean;
   name: string; phone: string; role: 'none' | 'primary' | 'backup'; authorized: boolean;
   verifiedAt?: string; smsConsent: boolean; pushConsent: boolean;
   smsRequested: boolean; pushRequested: boolean; smsSetupComplete: boolean;

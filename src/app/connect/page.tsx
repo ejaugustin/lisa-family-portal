@@ -18,11 +18,14 @@ export default function Connect() {
       <div className="card">
         <h1>Who are you setting this up for?</h1>
         <p>
-          Only her name is needed. Lisa will learn the rest from her, in her own words — that is
-          rather the point.
+          Your contact details are shared after she reviews and accepts your code.
         </p>
 
         <form action={action}>
+          <label htmlFor="caregiverName">Your name</label>
+          <input id="caregiverName" name="caregiverName" autoComplete="name" required maxLength={100} />
+          <label htmlFor="caregiverContactPhone">Your mobile number</label>
+          <input id="caregiverContactPhone" name="caregiverContactPhone" type="tel" autoComplete="tel" required maxLength={80} />
           <label htmlFor="seniorName">Her name</label>
           <input id="seniorName" name="seniorName" autoComplete="off" placeholder="Mum, Doris, Nana…" />
           <p className="muted" style={{ marginTop: 6 }}>

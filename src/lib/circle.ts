@@ -21,6 +21,9 @@ export type CircleLink = {
   connectedAt?: string;
   declinedAt?: string;
   expiresAt: number;
+  caregiverName?: string;
+  caregiverContactPhone?: string;
+  caregiverEmail?: string;
 };
 
 async function authHeader(): Promise<Record<string, string>> {
@@ -42,6 +45,8 @@ export async function listLinks(): Promise<CircleLink[]> {
 /** Returns the plaintext code. It is shown once and never stored anywhere. */
 export async function createLink(input: {
   seniorName: string;
+  caregiverName: string;
+  caregiverContactPhone: string;
   approxAge?: string;
   livesAlone?: string;
 }): Promise<{ linkId: string; code: string; expiresAt: number }> {
@@ -60,6 +65,16 @@ export async function createLink(input: {
     throw new CircleError(`failed:${res.status}:${bodyText.slice(0, 300)}`);
   }
   return res.json();
+}
+
+export async function updateContactDetails(linkId: string, input: { caregiverName: string; caregiverContactPhone: string }): Promise<void> {
+  const res = await fetch(`${API()}/caregiver/links/${encodeURIComponent(linkId)}/contact-details`, {
+    method: 'PUT', headers: await authHeader(), body: JSON.stringify(input), cache: 'no-store',
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(typeof body.error === 'string' ? body.error : 'Contact details could not be saved.');
+  }
 }
 
 // LISA-ID-002, Layer 3 — "her phone was lost." Immediately revokes every
