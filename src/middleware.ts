@@ -20,6 +20,10 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (PUBLIC.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
+  // Settings actions verify the session themselves. A middleware HTML redirect
+  // is not a valid action response when cookies expire while a form is open.
+  if (pathname === '/settings' && request.method === 'POST' && request.headers.has('next-action')) return NextResponse.next();
+
   const hasSession = request.cookies.has('lisa_id');
   if (!hasSession) {
     const url = request.nextUrl.clone();

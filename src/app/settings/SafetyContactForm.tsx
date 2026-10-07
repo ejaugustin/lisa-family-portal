@@ -1,10 +1,15 @@
 'use client';
 import { useActionState } from 'react';
+import Link from 'next/link';
 import type { SafetyContact } from '@/lib/safety-contacts';
-import { safetyContactAction } from './safety-actions';
+import { safetyContactAction, type SafetyState } from './safety-actions';
+import { submitSettingsAction } from './submit-settings-action';
 
 export function SafetyContactForm({ linkId, seniorName, initial }: { linkId: string; seniorName: string; initial: SafetyContact }) {
-  const [state, action, pending] = useActionState(safetyContactAction.bind(null, linkId), { contact: initial });
+  const [state, action, pending] = useActionState(
+    (previous: SafetyState, form: FormData) => submitSettingsAction(() => safetyContactAction(linkId, previous, form), previous),
+    { contact: initial } as SafetyState,
+  );
   const contact = state.contact ?? initial;
   return <section className="card" aria-label={`Safety contact for ${seniorName}`}>
     <h2>Safety contact for {seniorName}</h2>
@@ -34,6 +39,7 @@ export function SafetyContactForm({ linkId, seniorName, initial }: { linkId: str
       </form>
     </> : null}
     {state.error ? <p role="alert">{state.error}</p> : null}
+    {state.signInRequired ? <Link href="/sign-in">Sign in again</Link> : null}
     {state.message ? <p role="status">{state.message}</p> : null}
     <p className="muted">{contact.smsSetupComplete ? 'SMS contact setup is confirmed.' : 'SMS setup still requires the number, role, household permission, requested channel, and your consent.'} Safety SMS escalation and caregiver push delivery are not enabled by this form. Recording and live-view permissions stay separate.</p>
   </section>;
