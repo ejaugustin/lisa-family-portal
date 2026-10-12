@@ -18,6 +18,14 @@ const BILLING_EXEMPT = ['/billing', ...PUBLIC];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // A bearer code authorizes only the isolated event resolver, never portal data.
+  if (/^\/s\/[A-Za-z0-9_-]{43}(?:\/media)?$/.test(pathname)) {
+    const response = NextResponse.next();
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    response.headers.set('Cache-Control', 'no-store');
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return response;
+  }
   if (PUBLIC.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
   // Settings actions verify the session themselves. A middleware HTML redirect
