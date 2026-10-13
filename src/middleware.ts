@@ -34,6 +34,7 @@ export function middleware(request: NextRequest) {
 
   const hasSession = request.cookies.has('lisa_id');
   if (!hasSession) {
+    if (pathname.startsWith('/api/vision/')) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
     const url = request.nextUrl.clone();
     url.pathname = '/sign-in';
     return NextResponse.redirect(url);
@@ -42,6 +43,7 @@ export function middleware(request: NextRequest) {
   if (!BILLING_EXEMPT.some((p) => pathname.startsWith(p))) {
     const hasPaymentMethod = request.cookies.has('lisa_billing');
     if (!hasPaymentMethod) {
+      if (pathname.startsWith('/api/vision/')) return NextResponse.json({ error: 'billing_required' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
       const url = request.nextUrl.clone();
       url.pathname = '/billing/start';
       return NextResponse.redirect(url);
