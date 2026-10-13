@@ -537,6 +537,53 @@ textarea:focus { outline: 2px solid var(--navy); outline-offset: 1px; border-col
 .live-video { width:100%; height:100%; object-fit:contain; }
 .live-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; }
 .live-overlay button { border-radius:6px; min-height:44px; }
+/* Monitor layout is scoped to Look-In; other family views retain their theme. */
+body:has(.look-in-main) { background:#141615; color:#f4f6f5; }
+body:has(.look-in-main) .portal-header { background:#191c1a; border-color:#343b37; }
+body:has(.look-in-main) .wordmark, body:has(.look-in-main) .portal-header-name { color:#f4f6f5; }
+body:has(.look-in-main) .wordmark span { color:#a9d8c6; }
+body:has(.look-in-main) .portal-nav-link { color:#c5cdc8; }
+body:has(.look-in-main) .portal-nav-link:hover { background:#252e29; }
+body:has(.look-in-main) .portal-nav-link.active { background:#25483c; color:#d1f0e4; }
+body:has(.look-in-main) .portal-header button { color:#e2e9e5; border-color:#46504a; }
+.look-in-main { max-width:none; gap:24px; }
+.look-in-main h1 { font-family:inherit; font-size:26px; font-weight:700; letter-spacing:0; padding-bottom:20px; border-bottom:1px solid #343b37; }
+.look-in-main p, .look-in-main dt { color:#b5c2ba; }
+.look-in-main label { color:#b5c2ba; letter-spacing:0; margin:0; }
+.look-in-main button { width:auto; margin:0; border-radius:6px; border:1px solid #46504a; background:#222824; color:#f4f6f5; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; font-weight:500; }
+.look-in-main button:hover { background:#303e35; }
+.look-in-main button:focus-visible, .look-in-main select:focus-visible { outline:2px solid #a9d8c6; outline-offset:3px; }
+.look-in-main button:disabled { opacity:.5; }
+.look-in-toolbar { margin:0; gap:16px; }
+.look-in-toolbar label { flex:0 1 280px; }
+.look-in-toolbar select { font:inherit; color:#f4f6f5; background:#222824; border:1px solid #46504a; padding:10px 12px; border-radius:6px; }
+.look-in-toolbar > button { width:44px; padding:0; flex-shrink:0; }
+.look-in-section-heading { display:flex; justify-content:space-between; align-items:center; margin:8px 0 20px; }
+.look-in-section-heading h2 { margin-bottom:6px; }
+.look-in-section-heading p { margin:0; }
+.look-in-camera-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:20px; }
+.look-in-camera { min-width:0; overflow:hidden; border:1px solid #39433c; border-radius:8px; background:#191d1a; }
+.look-in-camera.selected { border-color:#8bbba6; }
+.look-in-snapshot { aspect-ratio:16/9; position:relative; background:#080b09; display:flex; align-items:center; justify-content:center; }
+.look-in-snapshot img { width:100%; height:100%; object-fit:contain; position:absolute; inset:0; }
+.look-in-snapshot > div { display:flex; gap:12px; align-items:center; flex-direction:column; padding:16px; color:#aebbb3; text-align:center; }
+.look-in-frame-age { position:absolute; bottom:12px; left:12px; background:#000c; color:white; padding:4px 8px; border-radius:4px; font-size:13px; }
+.look-in-camera-body { padding:18px; display:flex; flex-direction:column; gap:16px; }
+.look-in-camera-body h3, .look-in-camera-body p { margin:0; overflow-wrap:anywhere; }
+.look-in-status-row { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px; flex-wrap:wrap; }
+.look-in-status { border:1px solid #66756c; color:#ced7d1; padding:4px 8px; border-radius:4px; }
+.look-in-status.online { color:#b2e3ce; border-color:#81b29d; }
+.look-in-status.offline { color:#f4b8ad; border-color:#bc8176; }
+.look-in-camera dl { margin:0; display:grid; gap:8px; font-size:14px; }
+.look-in-camera dl > div { display:flex; justify-content:space-between; gap:12px; }
+.look-in-camera dd { margin:0; text-align:right; overflow-wrap:anywhere; }
+.look-in-camera-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.look-in-camera-actions button { flex:1 1 110px; padding:10px; }
+.look-in-events { scroll-margin-top:20px; border-top:1px solid #343b37; padding-top:24px; }
+.look-in-main .vision-event { border-color:#343b37; }
+.look-in-main .vision-event summary { cursor:pointer; color:#b2e3ce; }
+.look-in-main .vision-event button { margin-top:12px; }
+@media (max-width:600px) { .look-in-main { padding:24px 16px; } .look-in-toolbar label { flex:1 1 100%; } .look-in-camera-grid { grid-template-columns:1fr; } }
 @media (min-width:1000px) {
   .portal-header { position:fixed; inset:0 auto 0 0; width:240px; overflow-y:auto; padding:20px; border-right:1px solid var(--line); z-index:10; }
   .portal-header-row { display:flex; flex-direction:column; align-items:stretch; gap:24px; padding:0; }

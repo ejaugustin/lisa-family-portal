@@ -1,11 +1,8 @@
 import Link from 'next/link';
 import { signOutAction } from '../actions';
 
-// Shared top nav for every signed-in view, per the handoff's "views via top
-// nav" behaviour rule. `active` picks the highlighted item the same way the
-// design's prototype does — Settings stays highlighted while on the Report
-// sub-view, since that page is reached from Settings and has its own back
-// link rather than living in the nav.
+// Account preferences and alert consent remain reachable through the caregiver
+// name without placing Settings in the viewing navigation.
 
 const ITEMS: { key: string; label: string; href: string }[] = [
   { key: 'today', label: 'Today', href: '/dashboard' },
@@ -15,7 +12,6 @@ const ITEMS: { key: string; label: string; href: string }[] = [
   { key: 'look-in', label: 'Look-In', href: '/look-in' },
   { key: 'visit-notes', label: 'Visit notes', href: '/visit-notes' },
   { key: 'circle', label: 'Care circle', href: '/care-circle' },
-  { key: 'settings', label: 'Settings', href: '/settings' },
 ];
 
 export function PortalNav({
@@ -48,7 +44,7 @@ export function PortalNav({
         </nav>
 
         <form action={signOutAction} className="portal-header-sign-out">
-          {caregiverName && <span className="portal-header-name">{caregiverName}</span>}
+          {caregiverName && <Link href="/settings" className="portal-header-name" title="Your account and alert consent">{caregiverName}</Link>}
           <button type="submit" className="secondary">
             Sign out
           </button>

@@ -15,7 +15,7 @@ export async function SharedVisionPage({ mode, initialLinkId, initialCameraId }:
     return allowed && access ? { linkId: link.linkId, name: link.seniorName, access } : null;
   }));
   return <><PortalNav active={mode} caregiverName={caregiver.name || caregiver.email} />
-    <main className="portal-main"><h1>{mode === 'look-in' ? 'Look-In' : mode === 'check-in' ? 'Check-in' : 'Happenings'}</h1>
+    <main className={`portal-main${mode === 'look-in' ? ' look-in-main' : ''}`}><h1>{mode === 'look-in' ? 'Look-In' : mode === 'check-in' ? 'Check-in' : 'Happenings'}</h1>
       {mode === 'look-in' ? <LookInWorkspace initialLinkId={initialLinkId} initialCameraId={initialCameraId} households={shared.filter((item): item is NonNullable<typeof item> => item !== null)} /> : <VisionWorkspace mode={mode} initialLinkId={initialLinkId} initialCameraId={initialCameraId} households={shared.filter((item): item is NonNullable<typeof item> => item !== null)} />}
     </main></>;
 }

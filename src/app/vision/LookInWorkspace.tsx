@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowClockwiseIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { ArrowClockwiseIcon, VideoCameraIcon, ListBulletsIcon, ArrowsOutIcon } from '@phosphor-icons/react';
 import type { VisionAccess, VisionCamera, VisionEvent } from '@/lib/vision';
 import { LiveView } from '@/reevir/live-view';
 import { RecordingPlayer } from './RecordingPlayer';
@@ -80,19 +80,20 @@ export function LookInWorkspace({ households, initialLinkId, initialCameraId }: 
   if (!households.length) return <p>No rooms have been shared with you. The senior can grant access in Lisa &amp; Me under Vision's Family sharing settings.</p>;
 
   return <>
-    <div className="vision-filters">
+    <div className="vision-filters look-in-toolbar">
       <label>Household<select value={linkId} onChange={event => { setAccess(null); setEvents([]); setEventRooms([]); setLive(null); setRoomId(''); setLinkId(event.target.value); }}>{households.map(item => <option key={item.linkId} value={item.linkId}>{item.name}</option>)}</select></label>
       <label>Room<select value={roomId} disabled={!rooms.length} onChange={event => { setLive(null); setEvents([]); setRoomId(event.target.value); }}>{!rooms.length && <option value="">No rooms shared</option>}{rooms.map(([id, room]) => <option key={id} value={id}>{room}</option>)}</select></label>
       <button disabled={busy} title="Refresh Look-In" aria-label="Refresh Look-In" onClick={() => void read()}><ArrowClockwiseIcon size={22} /></button>
     </div>
     {error && <p role="alert">{error}</p>}
     {busy && <p role="status">Loading room information...</p>}
-    {camera && <section className="look-in-room" aria-label="Selected room">
-      <div><h2>{camera.room || camera.name}</h2><p>{camera.status === 'online' ? 'Online' : camera.status === 'offline' ? 'Offline' : 'Connection unknown'} / {camera.securityState === 'PRIVACY' ? 'Privacy' : camera.securityState === 'DISARMED' ? 'Paused' : 'Observing'}</p>
-      {camera.lastSeenISO && <p>Last camera contact <time dateTime={camera.lastSeenISO}>{new Date(camera.lastSeenISO).toLocaleString()}</time></p>}</div>
-      {access?.permissions.liveView ? <button disabled={camera.status !== 'online' || camera.securityState === 'PRIVACY' || camera.securityState === 'DISARMED'} onClick={() => setLive(camera)}><VideoCameraIcon size={22} /> Live look-in</button> : <p>Live viewing is not shared for this room.</p>}
+    {access?.permissions.cameraStatus && <section aria-label="Shared cameras">
+      <div className="look-in-section-heading"><div><h2>Your cameras</h2><p>{access.cameras.length} shared {access.cameras.length === 1 ? 'camera' : 'cameras'} in {households.find(item => item.linkId === linkId)?.name}</p></div></div>
+      <div className="look-in-camera-grid">{access.cameras.map(item => <RoomCard key={`${linkId}:${item.cameraId}`} camera={item} selected={item.cameraId === roomId} liveAllowed={access.permissions.liveView} eventsAllowed={access.permissions.eventHistory}
+        onLive={() => setLive(item)} onEvents={() => { if (item.cameraId !== roomId) { setEvents([]); setRoomId(item.cameraId); } document.getElementById('look-in-events')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />)}</div>
+      {!access.cameras.length && <p>No camera status is shared with you.</p>}
     </section>}
-    {access && <section aria-label="Room events"><h2>Events{camera ? ` / ${camera.room || camera.name}` : ''}</h2>
+    {access && <section id="look-in-events" className="look-in-events" aria-label="Room events"><h2>Events{camera ? ` / ${camera.room || camera.name}` : ''}</h2>
       {!access.permissions.eventHistory ? <p>Event history is not shared with you.</p> : <>
         {!busy && !events.length && <p>No shared events for this room.</p>}
         {events.map(event => <article key={`${linkId}:${event.id}`} className="vision-event"><h3>{event.summary}</h3><p>{event.room} / <time dateTime={event.detectedAtISO}>{new Date(event.detectedAtISO).toLocaleString()}</time></p>
@@ -104,4 +105,30 @@ export function LookInWorkspace({ households, initialLinkId, initialCameraId }: 
     </section>}
     {live && access?.permissions.liveView && <LiveView key={`${linkId}:${live.cameraId}`} linkId={linkId} camera={{ ...live, allowLiveRecording: false }} viewOnly onClose={() => setLive(null)} />}
   </>;
+}
+
+function age(value?: string) {
+  if (!value || !Number.isFinite(Date.parse(value))) return 'Not reported';
+  const seconds = Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 1000));
+  return seconds < 60 ? `${seconds}s ago` : seconds < 3600 ? `${Math.floor(seconds / 60)}m ago` : `${Math.floor(seconds / 3600)}h ago`;
+}
+
+function RoomCard({ camera, selected, liveAllowed, eventsAllowed, onLive, onEvents }: {
+  camera: VisionCamera; selected: boolean; liveAllowed: boolean; eventsAllowed: boolean; onLive: () => void; onEvents: () => void;
+}) {
+  const [failedImage, setFailedImage] = useState('');
+  const privacy = camera.securityState === 'PRIVACY';
+  const paused = camera.securityState === 'DISARMED';
+  const snapshot = liveAllowed && !privacy && !paused ? camera.latestSnapshot : undefined;
+  const image = snapshot?.url?.startsWith('https://') ? snapshot.url : undefined;
+  const name = camera.room || camera.name;
+  const status = camera.status === 'online' ? 'Online' : camera.status === 'offline' ? 'Offline' : 'Connection unknown';
+  return <article className={`look-in-camera${selected ? ' selected' : ''}`} aria-label={`${name} camera`}>
+    <div className="look-in-snapshot">{image && failedImage !== image ? <><img src={image} alt={`Last frame from ${name}`} onError={() => setFailedImage(image)} /><span className="look-in-frame-age">Last frame: {age(snapshot?.capturedAtISO)}</span></> : <div><VideoCameraIcon size={36} weight="light" /><span>{privacy ? 'Privacy is on' : paused ? 'Camera paused' : !liveAllowed ? 'Preview not shared' : image ? 'Preview unavailable' : 'Waiting for a camera preview'}</span></div>}</div>
+    <div className="look-in-camera-body"><h3>{name}</h3><div className="look-in-status-row"><span className={`look-in-status ${camera.status}`}>{status}</span><span>{privacy ? 'Privacy' : paused ? 'Paused' : 'Observing'}</span></div>
+      <p>{camera.status === 'offline' ? 'Camera is offline. Live viewing is unavailable.' : camera.status === 'unknown' ? 'Camera connection has not been reported.' : privacy ? 'The senior has enabled Privacy.' : paused ? 'The senior has paused this camera.' : 'Available for permitted viewing.'}</p>
+      <dl><div><dt>Device</dt><dd>{String(camera.health?.deviceModel || 'Lisa Vision camera')}</dd></div><div><dt>Last check-in</dt><dd>{age(camera.lastSeenISO)}</dd></div>{camera.batteryPercent !== undefined && <div><dt>Battery</dt><dd>{camera.batteryPercent}%</dd></div>}</dl>
+      <div className="look-in-camera-actions"><button title={`Live look-in: ${name}`} aria-label={`Live look-in: ${name}`} disabled={!liveAllowed || camera.status !== 'online' || privacy || paused} onClick={onLive}><ArrowsOutIcon size={20} /> Live look-in</button><button title={`Events: ${name}`} aria-label={`Events: ${name}`} disabled={!eventsAllowed} onClick={onEvents}><ListBulletsIcon size={20} /> Events</button></div>
+    </div>
+  </article>;
 }

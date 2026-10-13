@@ -12,6 +12,7 @@ export type VisionCamera = {
   batteryPercent?: number;
   power?: string;
   health?: Record<string, string | number | boolean>;
+  latestSnapshot?: { url: string; capturedAtISO: string; orientation?: string };
 };
 
 export type VisionEvent = {
