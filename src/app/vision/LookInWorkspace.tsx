@@ -38,7 +38,7 @@ export function LookInWorkspace({ households, initialLinkId, initialCameraId }: 
       const info = await response.json() as VisionAccess;
       if (sequence.current !== run) return;
       setAccess(info);
-      setLive(previous => previous && info.permissions.liveView && info.cameras.some(item => item.cameraId === previous.cameraId && item.status === 'online' && item.securityState !== 'PRIVACY' && item.securityState !== 'DISARMED') ? previous : null);
+      setLive(previous => previous && info.permissions.liveView && info.cameras.some(item => item.cameraId === previous.cameraId && item.status === 'online' && item.health?.state !== 'camera_backgrounded' && item.securityState !== 'PRIVACY' && item.securityState !== 'DISARMED') ? previous : null);
       if (info.permissions.cameraStatus && roomId && !info.cameras.some(item => item.cameraId === roomId)) {
         setEvents([]); setEventRooms([]); setCursor(undefined); setRoomId(info.cameras[0]?.cameraId ?? '');
         return;
@@ -119,6 +119,8 @@ function RoomCard({ camera, selected, liveAllowed, eventsAllowed, onLive, onEven
   const [failedImage, setFailedImage] = useState('');
   const privacy = camera.securityState === 'PRIVACY';
   const paused = camera.securityState === 'DISARMED';
+  const backgrounded = camera.health?.state === 'camera_backgrounded';
+  const detectionAttention = camera.health?.state === 'detection_needs_attention';
   const snapshot = liveAllowed && !privacy && !paused ? camera.latestSnapshot : undefined;
   const image = snapshot?.url?.startsWith('https://') ? snapshot.url : undefined;
   const name = camera.room || camera.name;
@@ -126,9 +128,9 @@ function RoomCard({ camera, selected, liveAllowed, eventsAllowed, onLive, onEven
   return <article className={`look-in-camera${selected ? ' selected' : ''}`} aria-label={`${name} camera`}>
     <div className="look-in-snapshot">{image && failedImage !== image ? <><img src={image} alt={`Last frame from ${name}`} onError={() => setFailedImage(image)} /><span className="look-in-frame-age">Last frame: {age(snapshot?.capturedAtISO)}</span></> : <div><VideoCameraIcon size={36} weight="light" /><span>{privacy ? 'Privacy is on' : paused ? 'Camera paused' : !liveAllowed ? 'Preview not shared' : image ? 'Preview unavailable' : 'Waiting for a camera preview'}</span></div>}</div>
     <div className="look-in-camera-body"><h3>{name}</h3><div className="look-in-status-row"><span className={`look-in-status ${camera.status}`}>{status}</span><span>{privacy ? 'Privacy' : paused ? 'Paused' : 'Observing'}</span></div>
-      <p>{camera.status === 'offline' ? 'Camera is offline. Live viewing is unavailable.' : camera.status === 'unknown' ? 'Camera connection has not been reported.' : privacy ? 'The senior has enabled Privacy.' : paused ? 'The senior has paused this camera.' : 'Available for permitted viewing.'}</p>
+      <p>{camera.status === 'offline' ? 'Camera is offline. Live viewing is unavailable.' : camera.status === 'unknown' ? 'Camera connection has not been reported.' : privacy ? 'The senior has enabled Privacy.' : paused ? 'The senior has paused this camera.' : backgrounded ? 'Open Lisa Vision on the camera phone to resume live viewing.' : detectionAttention ? 'Detection needs attention on the camera phone. Live viewing can still be requested.' : 'Available for permitted viewing.'}</p>
       <dl><div><dt>Device</dt><dd>{String(camera.health?.deviceModel || 'Lisa Vision camera')}</dd></div><div><dt>Last check-in</dt><dd>{age(camera.lastSeenISO)}</dd></div>{camera.batteryPercent !== undefined && <div><dt>Battery</dt><dd>{camera.batteryPercent}%</dd></div>}</dl>
-      <div className="look-in-camera-actions"><button title={`Live look-in: ${name}`} aria-label={`Live look-in: ${name}`} disabled={!liveAllowed || camera.status !== 'online' || privacy || paused} onClick={onLive}><ArrowsOutIcon size={20} /> Live look-in</button><button title={`Events: ${name}`} aria-label={`Events: ${name}`} disabled={!eventsAllowed} onClick={onEvents}><ListBulletsIcon size={20} /> Events</button></div>
+      <div className="look-in-camera-actions"><button title={`Live look-in: ${name}`} aria-label={`Live look-in: ${name}`} disabled={!liveAllowed || camera.status !== 'online' || backgrounded || privacy || paused} onClick={onLive}><ArrowsOutIcon size={20} /> Live look-in</button><button title={`Events: ${name}`} aria-label={`Events: ${name}`} disabled={!eventsAllowed} onClick={onEvents}><ListBulletsIcon size={20} /> Events</button></div>
     </div>
   </article>;
 }
