@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.700.0",
+    "@phosphor-icons/react": "^2.1.10",
     "aws-jwt-verify": "^4.0.1",
     "next": "^15.1.0",
     "react": "^19.0.0",

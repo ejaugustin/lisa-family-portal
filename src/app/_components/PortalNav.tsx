@@ -12,6 +12,7 @@ const ITEMS: { key: string; label: string; href: string }[] = [
   { key: 'ask', label: 'Ask Lisa', href: '/ask-lisa' },
   { key: 'topic-hints', label: 'Flag a topic', href: '/topic-hints' },
   { key: 'history', label: 'Alert history', href: '/alerts' },
+  { key: 'look-in', label: 'Look-In', href: '/look-in' },
   { key: 'visit-notes', label: 'Visit notes', href: '/visit-notes' },
   { key: 'circle', label: 'Care circle', href: '/care-circle' },
   { key: 'settings', label: 'Settings', href: '/settings' },
@@ -21,10 +22,10 @@ export function PortalNav({
   active,
   caregiverName,
 }: {
-  active: 'today' | 'ask' | 'topic-hints' | 'history' | 'visit-notes' | 'circle' | 'settings' | 'report';
+  active: 'today' | 'ask' | 'topic-hints' | 'history' | 'vision' | 'look-in' | 'check-in' | 'happenings' | 'visit-notes' | 'circle' | 'settings' | 'report';
   caregiverName?: string;
 }) {
-  const highlighted = active === 'report' ? 'settings' : active;
+  const highlighted = active === 'report' ? 'settings' : active === 'check-in' || active === 'happenings' ? 'look-in' : active;
 
   return (
     <header className="portal-header">
@@ -38,6 +39,7 @@ export function PortalNav({
             <Link
               key={item.key}
               href={item.href}
+              aria-current={item.key === highlighted ? 'page' : undefined}
               className={`portal-nav-link${item.key === highlighted ? ' active' : ''}`}
             >
               {item.label}
