@@ -103,7 +103,7 @@ export function LookInWorkspace({ households, initialLinkId, initialCameraId }: 
         {cursor && <button disabled={busy} onClick={() => void read(cursor)}>Load more events</button>}
       </>}
     </section>}
-    {live && access?.permissions.liveView && <LiveView key={`${linkId}:${live.cameraId}`} linkId={linkId} camera={{ ...live, allowLiveRecording: false }} viewOnly onClose={() => setLive(null)} />}
+    {live && access?.permissions.liveView && <LiveView key={`${linkId}:${live.cameraId}`} linkId={linkId} camera={{ ...live, allowLiveRecording: false, supportsTalk: live.health?.unrecordedTalkSupported === true }} viewOnly allowTalk={access.permissions.talk === true} onClose={() => setLive(null)} />}
   </>;
 }
 

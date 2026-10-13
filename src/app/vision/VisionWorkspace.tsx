@@ -92,6 +92,6 @@ export function VisionWorkspace({ mode, households, initialLinkId, initialCamera
       {cursor && <button disabled={busy} onClick={() => void read(cursor)}>Load more</button>}
     </>}
     {busy && <p role="status">Loading...</p>}
-    {live && access?.permissions.liveView && <LiveView key={`${selected}:${live.cameraId}`} linkId={selected} camera={{ ...live, allowLiveRecording: false }} viewOnly onClose={() => setLive(null)} />}
+    {live && access?.permissions.liveView && <LiveView key={`${selected}:${live.cameraId}`} linkId={selected} camera={{ ...live, allowLiveRecording: false, supportsTalk: live.health?.unrecordedTalkSupported === true }} viewOnly allowTalk={access.permissions.talk === true} onClose={() => setLive(null)} />}
   </>;
 }

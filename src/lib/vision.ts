@@ -29,7 +29,7 @@ export type VisionEvent = {
 };
 
 export type VisionAccess = {
-  permissions: { cameraStatus: boolean; eventHistory: boolean; recordings: boolean; liveView: boolean };
+  permissions: { cameraStatus: boolean; eventHistory: boolean; recordings: boolean; liveView: boolean; talk?: boolean };
   cameras: VisionCamera[];
 };
 

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MicrophoneIcon, MicrophoneSlashIcon, XIcon, ArrowClockwiseIcon, ArrowsOutSimpleIcon, RecordIcon, StopCircleIcon } from "@phosphor-icons/react";
 import { createGateway, type Camera, type LiveSession } from "./gateway";
-import { createLiveTalk, type LiveTalkControl } from "./live-talk";
+import { createUnrecordedTalk, type LiveTalkControl } from "./unrecorded-talk";
 import type { TalkState } from "./talk-session";
 
 const SIGNAL_POLL_MS = 2_500;
@@ -26,7 +26,7 @@ async function retryThrottled<T>(operation: () => Promise<T>, isDisposed: () => 
   }
 }
 
-export function LiveView({ camera, linkId, eventId, onClose, viewOnly = false }: { camera: Camera; linkId: string; eventId?: string; onClose: () => void; viewOnly?: boolean }) {
+export function LiveView({ camera, linkId, eventId, onClose, viewOnly = false, allowTalk = false }: { camera: Camera; linkId: string; eventId?: string; onClose: () => void; viewOnly?: boolean; allowTalk?: boolean }) {
   const api = createGateway(linkId);
   const video = useRef<HTMLVideoElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -98,15 +98,17 @@ export function LiveView({ camera, linkId, eventId, onClose, viewOnly = false }:
     };
     const fail = (cause: unknown) => { if (lifecycle.disposed) return; stop(); setStatus("Disconnected"); setError(cause instanceof Error ? cause.message : "Live connection ended."); setSupported(false); };
     const hide = () => { if (document.hidden) fail(new Error("Live view paused while this tab was hidden. Reconnect to resume.")); };
+    const blur = () => { talk.current?.mute(); };
     const escape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     document.addEventListener("visibilitychange", hide); document.addEventListener("keydown", escape);
-    setError(""); setStatus("Connecting"); setSupported(false); setTalkState("MUTED");
+    window.addEventListener("blur", blur);
+    setError(""); setStatus("Connecting"); setSupported(false); setTalkState("MUTED"); setTalkNotice(undefined);
     if (api.preview) { setStatus("Preview"); setError("Live video requires a connected account and an online Camera device."); }
     else {
       setup = setTimeout(() => { fail(new Error("Camera did not connect. Check its connection and retry.")); }, 30000);
       void (async () => {
         const response = await retryThrottled(
-          () => api.mutate<{ liveSession: LiveSession }>("/live-sessions", "POST", { cameraId: camera.cameraId, ...(eventId ? { eventId } : {}) }),
+          () => api.mutate<{ liveSession: LiveSession }>("/live-sessions", "POST", { cameraId: camera.cameraId, requestTalk: allowTalk && camera.supportsTalk === true, ...(eventId ? { eventId } : {}) }),
           isDisposed
         );
         if (lifecycle.disposed) { await api.mutate(`/live-sessions/${encodeURIComponent(response.liveSession.sessionId)}`, "DELETE"); return; }
@@ -115,7 +117,7 @@ export function LiveView({ camera, linkId, eventId, onClose, viewOnly = false }:
         const id = sessionId;
         const connection = new RTCPeerConnection({ iceServers: response.liveSession.iceServers }); peer = connection;
         connection.addTransceiver("video", { direction: "recvonly" });
-        if (!viewOnly) talk.current = createLiveTalk(connection, (state, available, message) => { if (!lifecycle.disposed) { setTalkState(state); setSupported(available); setTalkNotice(message); } });
+        if (allowTalk && response.liveSession.talkAllowed === true) talk.current = createUnrecordedTalk(connection, (state, available, message) => { if (!lifecycle.disposed) { setTalkState(state); setSupported(available); setTalkNotice(message); } });
         const stream = new MediaStream();
         const mimeType = [
           "video/mp4;codecs=avc3,mp4a.40.2",
@@ -156,6 +158,7 @@ export function LiveView({ camera, linkId, eventId, onClose, viewOnly = false }:
           if (connection.connectionState === "failed" || connection.connectionState === "closed") {
             fail(new Error("Live transport interrupted. Reconnect to retry."));
           } else if (connection.connectionState === "disconnected") {
+            talk.current?.mute();
             setStatus("Reconnecting");
             disconnectGrace = setTimeout(() => fail(new Error("Live transport interrupted. Reconnect to retry.")), 8_000);
           } else if (connection.connectionState === "connected" && !lifecycle.disposed) {
@@ -233,9 +236,21 @@ export function LiveView({ camera, linkId, eventId, onClose, viewOnly = false }:
         }, 2000);
       })().catch(fail);
     }
-    return () => { stop(); document.removeEventListener("visibilitychange", hide); document.removeEventListener("keydown", escape); };
+    return () => { stop(); document.removeEventListener("visibilitychange", hide); document.removeEventListener("keydown", escape); window.removeEventListener("blur", blur); };
     // A peer owns its lifecycle; rerenders must not restart a session.
-  }, [camera.cameraId, linkId, eventId, retry]);
+  }, [camera.cameraId, camera.supportsTalk, linkId, eventId, retry, allowTalk]);
   const loading = status === "Connecting" || status === "Loading" || status === "Reconnecting";
-  return <div className="live-overlay" ref={panel} role="dialog" aria-modal="true" aria-label={`Live: ${camera.name ?? camera.cameraId}`}><header><h2>{camera.name ?? camera.cameraId}</h2><span role="status">{status}</span><button title="Stop live view" aria-label="Stop live view" onClick={onClose}><XIcon /> Stop live view</button></header><div className="live-stage"><video ref={video} autoPlay playsInline controls controlsList="nodownload noremoteplayback" className="live-video" />{loading ? <div className="live-loading" role="status"><span className="live-spinner" aria-hidden="true" /><strong>{status === "Reconnecting" ? "Reconnecting live view..." : "Loading live view..."}</strong><small>Contacting the camera and preparing a secure stream.</small></div> : null}</div><p role={error ? "alert" : "status"}>{error || lightNotice || talkNotice || (talkState === "TALKING" ? "Talking / Camera recording confirmed" : "")}</p><footer>{!viewOnly && <><button disabled={!recordingSupported || status !== "Live"} title={recordingSupported ? "Record live view to this computer" : "MP4 recording is unavailable in this browser"} onClick={() => recorder.current?.toggle()}>{recording ? <StopCircleIcon /> : <RecordIcon />}{recording ? ` Stop ${String(Math.floor(recordingSeconds / 60))}:${String(recordingSeconds % 60).padStart(2, "0")}` : " Record"}</button><button disabled={!supported || status !== "Live" || recording} title="Toggle recorded talk" onClick={() => talk.current?.toggle()}>{talkState === "TALKING" ? <MicrophoneIcon /> : <MicrophoneSlashIcon />}{talkState === "PREPARING" ? "Preparing recording" : talkState === "TALKING" ? "Mute" : "Talk"}</button></>}<button onClick={() => { setRetry(n => n + 1); }}><ArrowClockwiseIcon /> Reconnect</button><button title="Fullscreen" aria-label="Fullscreen" onClick={() => void panel.current?.requestFullscreen().catch(() => { setError("Fullscreen is unavailable in this browser."); })}><ArrowsOutSimpleIcon /></button></footer></div>;
+  return <div className="live-overlay" ref={panel} role="dialog" aria-modal="true" aria-label={`Live: ${camera.name ?? camera.cameraId}`}>
+    <header><h2>{camera.name ?? camera.cameraId}</h2><span role="status">{status}</span><button title="Stop live view" aria-label="Stop live view" onClick={onClose}><XIcon /> Stop live view</button></header>
+    <div className="live-stage"><video ref={video} autoPlay playsInline controls controlsList="nodownload noremoteplayback" className="live-video" />{loading && <div className="live-loading" role="status"><span className="live-spinner" aria-hidden="true" /><strong>{status === "Reconnecting" ? "Reconnecting live view..." : "Loading live view..."}</strong><small>Contacting the camera and preparing a secure stream.</small></div>}</div>
+    <p role={error ? "alert" : "status"}>{error || lightNotice || talkNotice || (talkState === "TALKING" ? "Microphone on / Talk is not recorded" : "")}</p>
+    <footer>
+      {!viewOnly && <button disabled={!recordingSupported || status !== "Live"} title={recordingSupported ? "Record live view to this computer" : "MP4 recording is unavailable in this browser"} onClick={() => recorder.current?.toggle()}>{recording ? <StopCircleIcon /> : <RecordIcon />}{recording ? ` Stop ${String(Math.floor(recordingSeconds / 60))}:${String(recordingSeconds % 60).padStart(2, "0")}` : " Record"}</button>}
+      <button disabled={!allowTalk || !supported || status !== "Live" || recording} title={!allowTalk ? "The senior must enable Talk for this room." : camera.supportsTalk !== true ? "Update Lisa Vision on the camera phone to enable unrecorded Talk." : !supported ? "Waiting for camera audio to become ready." : "Speak through the camera phone. Talk is not recorded."} onClick={() => talk.current?.toggle()}>
+        {talkState === "TALKING" ? <MicrophoneIcon /> : <MicrophoneSlashIcon />}{talkState === "PREPARING" ? "Cancel talk" : talkState === "TALKING" ? "Mute" : "Talk"}
+      </button>
+      <button onClick={() => setRetry(n => n + 1)}><ArrowClockwiseIcon /> Reconnect</button>
+      <button title="Fullscreen" aria-label="Fullscreen" onClick={() => void panel.current?.requestFullscreen().catch(() => setError("Fullscreen is unavailable in this browser."))}><ArrowsOutSimpleIcon /></button>
+    </footer>
+  </div>;
 }

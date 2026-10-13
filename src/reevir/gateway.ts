@@ -1,5 +1,5 @@
-export type Camera = { cameraId: string; name?: string; allowLiveRecording?: boolean };
-export type LiveSession = { sessionId: string; status: string; expiresAt: string; iceServers: RTCIceServer[] };
+export type Camera = { cameraId: string; name?: string; allowLiveRecording?: boolean; supportsTalk?: boolean };
+export type LiveSession = { sessionId: string; status: string; expiresAt: string; iceServers: RTCIceServer[]; talkAllowed?: boolean };
 type Signals = { liveSession: LiveSession; signals: { sequence: number; sender: string; type: string; payload: unknown }[] };
 async function liveError(response: Response): Promise<Error> {
   const body = await response.json().catch(() => ({}));
@@ -11,6 +11,8 @@ async function liveError(response: Response): Promise<Error> {
     camera_backgrounded: 'Open Lisa Vision on the camera phone and keep it in the foreground.',
     camera_private: 'Privacy is on. Live viewing is unavailable.',
     live_access_denied: 'Live viewing is not shared for this room.',
+    talk_access_denied: 'Talk permission is required for this room. Ask the senior to enable it in Family sharing.',
+    talk_camera_update_required: 'Update Lisa Vision on the camera phone to enable unrecorded Talk.',
     access_denied: 'This household is no longer shared with your caregiver account.',
     access_revoked: 'Live permission ended or was revoked.',
     session_expired: 'This live session ended. Reconnect to start a new one.',
