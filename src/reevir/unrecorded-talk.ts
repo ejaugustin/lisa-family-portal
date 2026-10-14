@@ -6,12 +6,13 @@ export function createUnrecordedTalk(peer: RTCPeerConnection, changed: (state: T
   const audio = peer.addTransceiver('audio', { direction: 'sendrecv' });
   const channel = peer.createDataChannel('lisa-talk-v1', { ordered: true });
   let state: TalkState = 'MUTED', supported = false, disposed = false, generation = 0, sequence = 0;
+  let notice: string | undefined;
   let stream: MediaStream | undefined, track: MediaStreamTrack | undefined;
   let operation: Promise<void> | undefined;
   let cleanup = Promise.resolve();
   let expiry: ReturnType<typeof setTimeout> | undefined;
   let pending: { id: number; sent: number; grant: boolean; resolve?: (expires: number) => void; reject?: (error: Error) => void } | undefined;
-  const report = (next: TalkState, message?: string) => { state = next; if (!disposed) changed(next, supported, message); };
+  const report = (next: TalkState, message?: string) => { state = next; notice = message; if (!disposed) changed(next, supported, notice); };
   const mute = () => {
     generation++; clearTimeout(expiry);
     if (track) track.enabled = false;
@@ -44,7 +45,7 @@ export function createUnrecordedTalk(peer: RTCPeerConnection, changed: (state: T
       } else if (request.resolve) request.resolve(expires);
       else if (state === 'TALKING') applyExpiry(expires);
     }
-    if (!disposed) changed(state, supported);
+    if (!disposed) changed(state, supported, notice);
   };
   const timer = setInterval(() => {
     if (disposed || channel.readyState !== 'open') return;
@@ -81,7 +82,14 @@ export function createUnrecordedTalk(peer: RTCPeerConnection, changed: (state: T
       applyExpiry(expires); microphone.enabled = true; enabled = true;
       report('TALKING', 'Microphone on. Talk is not recorded.');
     } catch (error) {
-      if (current()) fail(error instanceof Error ? error.message : 'Talk could not start.');
+      if (current()) {
+        const name = typeof error === 'object' && error !== null && 'name' in error ? error.name : '';
+        fail(name === 'NotAllowedError' || name === 'SecurityError'
+          ? 'Microphone access is blocked in this browser. Allow Microphone in this site\'s browser settings, then tap Talk again. The senior\'s Talk permission is separate.'
+          : name === 'NotFoundError' ? 'No microphone was found on this computer. Connect one, then tap Talk again.'
+          : name === 'NotReadableError' ? 'Your microphone is unavailable or in use. Check your computer\'s microphone settings, then tap Talk again.'
+          : error instanceof Error ? error.message : 'Talk could not start.');
+      }
     } finally {
       if (!enabled) acquired?.getTracks().forEach(item => { item.enabled = false; item.stop(); });
     }
