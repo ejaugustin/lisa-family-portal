@@ -40,8 +40,9 @@ export function createUnrecordedTalk(peer: RTCPeerConnection, changed: (state: T
     if (request.grant) {
       const expires = request.sent + (typeof reply.leaseMs === 'number' ? Math.min(1000, Math.max(0, reply.leaseMs)) : 0);
       if (!supported || reply.ready !== true || expires <= Date.now()) {
-        request.reject?.(new Error('Camera audio is unavailable or busy. Talk was not started.'));
-        if (state === 'TALKING') fail('Camera audio became unavailable.');
+        const message = typeof reply.reason === 'string' && reply.reason.trim() ? reply.reason.slice(0, 400) : 'Camera audio is unavailable or busy. Talk was not started. Close and reopen Lisa Vision on the camera phone, then reconnect.';
+        request.reject?.(new Error(message));
+        if (state === 'TALKING') fail(message);
       } else if (request.resolve) request.resolve(expires);
       else if (state === 'TALKING') applyExpiry(expires);
     }
