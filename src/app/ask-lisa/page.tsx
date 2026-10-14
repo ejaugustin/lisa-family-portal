@@ -15,7 +15,7 @@ const TIERS: { label: string; note: string; tone: 'confirm' | 'amber' | 'never' 
   { label: 'Anything already flagged', note: 'If Lisa has alerted you about it, she can talk about it.', tone: 'confirm' },
   {
     label: 'Medication and conditions',
-    note: 'Only if she has chosen to share it. Whether she has is on your Settings page.',
+    note: 'Medication confirmations and health details are not connected to Ask Lisa yet.',
     tone: 'amber',
   },
   { label: 'What she actually said', note: 'Never — not a transcript, not a summary of one. No exceptions.', tone: 'never' },

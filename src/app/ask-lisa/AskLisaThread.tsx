@@ -22,7 +22,7 @@ function Bubble({ inquiry }: { inquiry: CaregiverInquiry }) {
         <span className="chat-bubble-who">Lisa</span>
         <span className="chat-bubble-text">{inquiry.answerText}</span>
         <span className="chat-bubble-tag" style={{ color: inquiry.declined ? '#7A2E22' : 'var(--ink-3)' }}>
-          {inquiry.declined ? "Didn't share — " : ''}
+          {inquiry.declined ? inquiry.tier === 'medication_conditions' ? 'Not available — ' : "Didn't share — " : ''}
           {TIER_TAG[inquiry.tier]}
         </span>
       </div>
