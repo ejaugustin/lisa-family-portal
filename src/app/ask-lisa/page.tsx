@@ -11,11 +11,12 @@ import { AskLisaThread } from './AskLisaThread';
 // to her on Lisa's next turn with her. See lisa-caregiver-portal.md.
 
 const TIERS: { label: string; note: string; tone: 'confirm' | 'amber' | 'never' }[] = [
-  { label: 'How she seems', note: 'Mood, engagement, whether you should worry. Always available.', tone: 'confirm' },
+  { label: 'Latest conversation', note: 'A dated picture of how your loved one seemed during the last conversation.', tone: 'confirm' },
+  { label: 'Meals, sleep and appointments', note: 'Reported updates, scheduled appointments and agreed follow-ups. Missing confirmations stay unknown.', tone: 'confirm' },
   { label: 'Anything already flagged', note: 'If Lisa has alerted you about it, she can talk about it.', tone: 'confirm' },
   {
     label: 'Medication and conditions',
-    note: 'Medication confirmations and health details are not connected to Ask Lisa yet.',
+    note: 'Saved medications and reported confirmations, with dates. A reminder without an answer does not mean a dose was missed.',
     tone: 'amber',
   },
   { label: 'What she actually said', note: 'Never — not a transcript, not a summary of one. No exceptions.', tone: 'never' },
@@ -42,7 +43,7 @@ export default async function AskLisa() {
       <main className="portal-main">
         <div>
           <h1>Ask Lisa</h1>
-          <p className="muted">She&rsquo;ll mention to her that you asked.</p>
+          <p className="muted">Updates from your loved one&rsquo;s conversations and daily care records.</p>
         </div>
 
         <div className="ask-layout">
@@ -67,7 +68,7 @@ export default async function AskLisa() {
 
           <div className="ask-rail">
             <div className="notice">
-              <h3>Your mother is told you asked</h3>
+              <h3>Your loved one knows you checked in</h3>
               <p>
                 Lisa mentions it in their next conversation, warmly and in passing — &ldquo;Sarah checked in
                 on you today.&rdquo; That happens whether she answers you or not. This isn&rsquo;t a back
@@ -88,7 +89,7 @@ export default async function AskLisa() {
                 </div>
               ))}
               <p className="muted" style={{ marginTop: 6, marginBottom: 0 }}>
-                Asking a different way won&rsquo;t change the answer.
+                Reports reflect what Lisa knows at the recorded time. New information may change the answer.
               </p>
             </div>
           </div>

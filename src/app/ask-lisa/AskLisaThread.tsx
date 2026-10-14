@@ -6,6 +6,7 @@ import type { CaregiverInquiry } from '@/lib/circle';
 
 const TIER_TAG: Record<CaregiverInquiry['tier'], string> = {
   general_wellbeing: 'How she seems',
+  daily_care: 'Daily care records',
   flagged: 'Already flagged',
   medication_conditions: 'Medication & conditions',
   verbatim: 'What she said',

@@ -103,7 +103,7 @@ export async function revokeLink(linkId: string): Promise<void> {
   if (!res.ok) throw new CircleError('failed');
 }
 
-export type InquiryTier = 'general_wellbeing' | 'flagged' | 'medication_conditions' | 'verbatim';
+export type InquiryTier = 'general_wellbeing' | 'daily_care' | 'flagged' | 'medication_conditions' | 'verbatim';
 
 export type CaregiverInquiry = {
   inquiryId: string;
