@@ -41,7 +41,8 @@ export function createUnrecordedTalk(peer: RTCPeerConnection, changed: (state: T
       const expires = request.sent + (typeof reply.leaseMs === 'number' ? Math.min(1000, Math.max(0, reply.leaseMs)) : 0);
       if (!supported || reply.ready !== true || expires <= Date.now()) {
         const message = typeof reply.reason === 'string' && reply.reason.trim() ? reply.reason.slice(0, 400) : 'Camera audio is unavailable or busy. Talk was not started. Close and reopen Lisa Vision on the camera phone, then reconnect.';
-        request.reject?.(new Error(message));
+        const failure = Object.assign(new Error(message), { retryable: reply.retryable === true });
+        request.reject?.(failure);
         if (state === 'TALKING') fail(message);
       } else if (request.resolve) request.resolve(expires);
       else if (state === 'TALKING') applyExpiry(expires);
@@ -74,10 +75,21 @@ export function createUnrecordedTalk(peer: RTCPeerConnection, changed: (state: T
       if (!current()) return;
       stream = acquired; track = microphone;
       await audio.sender.replaceTrack(microphone); if (!current()) return;
-      const expires = await new Promise<number>((resolve, reject) => {
-        if (channel.readyState !== 'open' || !supported) { reject(new Error('Camera audio is unavailable.')); return; }
-        send(true, resolve, reject);
-      });
+      const deadline = Date.now() + 8000;
+      let expires = 0;
+      while (current() && !expires) {
+        try {
+          expires = await new Promise<number>((resolve, reject) => {
+            if (channel.readyState !== 'open' || !supported) { reject(new Error('Camera audio is unavailable.')); return; }
+            send(true, resolve, reject);
+          });
+        } catch (error) {
+          if (!current()) return;
+          if (!(typeof error === 'object' && error !== null && 'retryable' in error && error.retryable === true) || Date.now() >= deadline) throw error;
+          report('PREPARING', 'Finishing the current recording before unrecorded Talk...');
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
       if (!current()) return;
       if (expires <= Date.now()) throw new Error('Camera audio confirmation expired.');
       applyExpiry(expires); microphone.enabled = true; enabled = true;
