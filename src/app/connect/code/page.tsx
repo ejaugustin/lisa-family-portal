@@ -4,6 +4,7 @@ import { currentCaregiver } from '@/lib/session';
 import { listLinks } from '@/lib/circle';
 import { recallCode } from '@/lib/last-code';
 import { endLinkAction } from '../actions';
+import { ConnectionRefresh } from '../../_components/ConnectionRefresh';
 
 export default async function CodePage() {
   const caregiver = await currentCaregiver();
@@ -14,6 +15,7 @@ export default async function CodePage() {
   const link = remembered ? links.find((l) => l.linkId === remembered.linkId) : undefined;
 
   if (!link) redirect('/connect');
+  if (link.status === 'revoked') redirect('/dashboard');
 
   const her = link.seniorName;
   const firstName = caregiver.name ? caregiver.name.split(' ')[0] : 'Someone';
@@ -112,6 +114,7 @@ export default async function CodePage() {
           Cancel this invitation
         </button>
       </form>
+      <ConnectionRefresh />
     </main>
   );
 }

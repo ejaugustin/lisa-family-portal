@@ -4,6 +4,7 @@ import { currentCaregiver } from '@/lib/session';
 import { listLinks } from '@/lib/circle';
 import { endLinkAction } from '../connect/actions';
 import { PortalNav } from '../_components/PortalNav';
+import { ConnectionRefresh } from '../_components/ConnectionRefresh';
 
 // The signed-in home. It answers only questions we can honestly answer. A
 // dashboard full of placeholder tiles would teach a worried family member to
@@ -24,6 +25,7 @@ export default async function Dashboard() {
 
       <main className="portal-main">
         <h1>Hello{caregiver.name ? `, ${caregiver.name.split(' ')[0]}` : ''}</h1>
+        {!connected && pending && <ConnectionRefresh />}
 
         {connected && (
           <>
@@ -56,13 +58,16 @@ export default async function Dashboard() {
             </div>
 
             <div className="card">
-              <h2>How she is doing</h2>
-              <p className="muted">
-                This is where her days will be summarised — how she has been in herself, whether she
-                has been eating and sleeping, whether anything sounded worth a call. Not transcripts:
-                Lisa will tell you how your mother is, not what she said.
-              </p>
-              <p className="muted">Being built next.</p>
+              <h2>Finish setting up your connection</h2>
+              <ol>
+                <li>On the senior’s phone, open My People, choose your name, select Primary or Backup, authorize the safety contact, and save contact settings.</li>
+                <li><Link href="/settings">Open your contact and notification settings</Link>. Save your SMS consent, select Send verification text, then enter the code you receive. Connecting alone does not send a text.</li>
+                <li>On the senior’s phone, open Vision → Family sharing. Select your newly connected account and the rooms to share. Enable Camera status, Moments, Recordings, and Live view as wanted. Enable Talk through camera to speak remotely.</li>
+              </ol>
+              <p>Keep Lisa Vision open on each camera phone. Older sharing permissions may need to be assigned again after reconnecting.</p>
+              <p><Link href={`/look-in?linkId=${encodeURIComponent(connected.linkId)}`}>Open Look-In: cameras, live view and events</Link></p>
+              <p><Link href="/ask-lisa">Ask Lisa how she is doing</Link></p>
+              <p className="muted">Verification texts confirm your number. They are not an emergency test or a promise of automatic phone calls.</p>
             </div>
           </>
         )}
