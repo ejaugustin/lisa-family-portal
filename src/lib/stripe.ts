@@ -25,8 +25,18 @@ export const TRIAL_DAYS = 14;
 
 let _stripe: Stripe | null = null;
 function stripe(): Stripe {
-  if (!_stripe) _stripe = new Stripe(billingEnv('STRIPE_SECRET_KEY'));
+  if (!_stripe) _stripe = new Stripe(billingEnv('STRIPE_SECRET_KEY'), { timeout: 4000, maxNetworkRetries: 1 });
   return _stripe;
+}
+
+/** Read-only account lookup. Never create a customer or start a subscription. */
+export async function hasSavedPaymentMethod(email: string): Promise<boolean> {
+  if (!email.trim()) return false;
+  for await (const customer of stripe().customers.list({ email: email.trim().toLowerCase(), limit: 100 })) {
+    const methods = await stripe().paymentMethods.list({ customer: customer.id, type: 'card', limit: 1 });
+    if (methods.data.length > 0) return true;
+  }
+  return false;
 }
 
 /**
@@ -71,6 +81,7 @@ export async function createSetupCheckoutSession(input: {
  */
 export async function confirmSetupSession(
   sessionId: string,
+  email: string,
 ): Promise<{ ok: boolean; customerId?: string }> {
   const session = await stripe().checkout.sessions.retrieve(sessionId, {
     expand: ['setup_intent'],
@@ -78,7 +89,9 @@ export async function confirmSetupSession(
   const setupIntent = session.setup_intent;
   const succeeded =
     typeof setupIntent === 'object' && setupIntent !== null && setupIntent.status === 'succeeded';
-  if (!succeeded || typeof session.customer !== 'string') return { ok: false };
+  if (!succeeded || session.mode !== 'setup' || session.status !== 'complete' || typeof session.customer !== 'string') return { ok: false };
+  const customer = await stripe().customers.retrieve(session.customer);
+  if (customer.deleted || customer.email?.toLowerCase() !== email.trim().toLowerCase()) return { ok: false };
   return { ok: true, customerId: session.customer };
 }
 

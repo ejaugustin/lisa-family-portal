@@ -16,7 +16,7 @@ import type { NextRequest } from 'next/server';
 const PUBLIC = ['/sign-in', '/sign-up', '/verify', '/forgot-password'];
 const BILLING_EXEMPT = ['/billing', ...PUBLIC];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   // A bearer code authorizes only the isolated event resolver, never portal data.
   if (/^\/s\/[A-Za-z0-9_-]{43}(?:\/media)?$/.test(pathname)) {
@@ -27,6 +27,8 @@ export function middleware(request: NextRequest) {
     return response;
   }
   if (PUBLIC.some((p) => pathname.startsWith(p))) return NextResponse.next();
+  // This route verifies the Cognito token itself; avoid recursive billing checks.
+  if (pathname === '/api/billing/status') return NextResponse.next();
 
   // Settings actions verify the session themselves. A middleware HTML redirect
   // is not a valid action response when cookies expire while a form is open.
@@ -41,7 +43,24 @@ export function middleware(request: NextRequest) {
   }
 
   if (!BILLING_EXEMPT.some((p) => pathname.startsWith(p))) {
-    const hasPaymentMethod = request.cookies.has('lisa_billing');
+    let status: Response;
+    try {
+      const origin = process.env.NODE_ENV === 'production' ? 'https://family.lisaandme.com' : request.url;
+      status = await fetch(new URL('/api/billing/status', origin), {
+        headers: { cookie: request.headers.get('cookie') ?? '' },
+        cache: 'no-store', signal: AbortSignal.timeout(10000),
+      });
+    } catch {
+      status = new Response(null, { status: 503 });
+    }
+    if (!status.ok) {
+      if (pathname.startsWith('/api/')) return NextResponse.json({ error: status.status === 401 ? 'unauthorized' : 'billing_unavailable' }, { status: status.status === 401 ? 401 : 503, headers: { 'Cache-Control': 'no-store' } });
+      const url = request.nextUrl.clone();
+      url.pathname = status.status === 401 ? '/sign-in' : '/billing/start';
+      url.search = status.status === 401 ? '' : '?unavailable=1';
+      return NextResponse.redirect(url);
+    }
+    const hasPaymentMethod = (await status.json()).ready === true;
     if (!hasPaymentMethod) {
       if (pathname.startsWith('/api/vision/')) return NextResponse.json({ error: 'billing_required' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
       const url = request.nextUrl.clone();

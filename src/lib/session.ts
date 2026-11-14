@@ -51,6 +51,7 @@ export async function clearSession(): Promise<void> {
   const jar = await cookies();
   jar.delete(ID_COOKIE);
   jar.delete(RT_COOKIE);
+  jar.delete('lisa_billing');
 }
 
 /**

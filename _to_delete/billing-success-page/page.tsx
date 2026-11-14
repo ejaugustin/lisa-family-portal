@@ -25,7 +25,7 @@ export default async function BillingSuccess({
   const { session_id: sessionId } = await searchParams;
   if (!sessionId) redirect('/billing/start?error=1');
 
-  const result = await confirmSetupSession(sessionId);
+  const result = await confirmSetupSession(sessionId, caregiver.email);
   if (!result.ok) redirect('/billing/start?error=1');
 
   const jar = await cookies();
