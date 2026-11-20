@@ -87,6 +87,22 @@ export function LookInWorkspace({ households, initialLinkId, initialCameraId }: 
     </div>
     {error && <p role="alert">{error}</p>}
     {busy && <p role="status">Loading room information...</p>}
+    {!!access?.inactivityChecks?.length && <section aria-label="Scheduled check-ins">
+      <h2>Scheduled check-ins</h2>
+      {access.inactivityChecks.map(check => <article key={check.checkId} className="vision-event">
+        <h3>Check-in: {check.status.replace(/_/g, ' ')}</h3>
+        {check.evidence.map(e => <p key={e.cameraId}>{e.room}: {e.target === 'person' ? 'No confident recognition of the selected person' : 'No person or motion detections'} from {new Date(e.windowStartISO).toLocaleString(undefined, { timeZone: e.timeZone })} to {new Date(e.windowEndISO).toLocaleString(undefined, { timeZone: e.timeZone })} ({e.timeZone}). Last detection: {e.lastDetectionISO ? new Date(e.lastDetectionISO).toLocaleString() : 'not recorded in the recent history'}.</p>)}
+        <p>Camera heartbeats covered the evaluation period. This does not establish that anyone was absent or unsafe.</p>
+        <p>Senior response: {check.respondedAtISO ? `${check.status} at ${new Date(check.respondedAtISO).toLocaleString()}` : 'not received'}. Check-in notification: {check.checkInDeliveryState.replace(/_/g, ' ')}.</p>
+        <p>Notification status: {check.notificationState.replace(/_/g, ' ')}. SMS delivery is not confirmed by provider acceptance.</p>
+        {check.acknowledgedAtISO && <p>A caregiver acknowledged this check-in at {new Date(check.acknowledgedAtISO).toLocaleString()}.</p>}
+        {check.canAcknowledge && <button disabled={busy} onClick={async () => {
+          setBusy(true); setError('');
+          try { const response = await fetch(`${root}/check-ins/${encodeURIComponent(check.checkId)}/acknowledge`, { method: 'POST' }); if (!response.ok) throw new Error('The check-in could not be acknowledged. Refresh and try again.'); await read(); }
+          catch (e) { setError(e instanceof Error ? e.message : 'Acknowledgment failed.'); } finally { setBusy(false); }
+        }}>I am checking in — acknowledge</button>}
+      </article>)}
+    </section>}
     {access?.permissions.cameraStatus && <section aria-label="Shared cameras">
       <div className="look-in-section-heading"><div><h2>Your cameras</h2><p>{access.cameras.length} shared {access.cameras.length === 1 ? 'camera' : 'cameras'} in {households.find(item => item.linkId === linkId)?.name}</p></div></div>
       <div className="look-in-camera-grid">{access.cameras.map(item => <RoomCard key={`${linkId}:${item.cameraId}`} camera={item} selected={item.cameraId === roomId} liveAllowed={access.permissions.liveView} eventsAllowed={access.permissions.eventHistory}
@@ -96,8 +112,12 @@ export function LookInWorkspace({ households, initialLinkId, initialCameraId }: 
     {access && <section id="look-in-events" className="look-in-events" aria-label="Room events"><h2>Events{camera ? ` / ${camera.room || camera.name}` : ''}</h2>
       {!access.permissions.eventHistory ? <p>Event history is not shared with you.</p> : <>
         {!busy && !events.length && <p>No shared events for this room.</p>}
-        {events.map(event => <article key={`${linkId}:${event.id}`} className="vision-event"><h3>{event.summary}</h3><p>{event.room} / <time dateTime={event.detectedAtISO}>{new Date(event.detectedAtISO).toLocaleString()}</time></p>
-          {event.description && <details><summary>Description</summary><p>{event.description}</p></details>}
+        {events.map(event => <article key={`${linkId}:${event.id}`} className="vision-event"><h3>{event.insight?.headline ?? event.summary}</h3><p>{event.room} / <time dateTime={event.detectedAtISO}>{new Date(event.detectedAtISO).toLocaleString()}</time></p>
+          {event.insight ? <section aria-label="Event insight">
+            {event.insight.observations.map((line, index) => <p key={`observation-${index}`}>{line}</p>)}
+            {event.insight.contextLines.map((line, index) => <p key={`context-${index}`}>{line}</p>)}
+            {event.insight.limitations.length > 0 && <details><summary>Evidence limitations</summary>{event.insight.limitations.map((line, index) => <p key={`limitation-${index}`}>{line}</p>)}</details>}
+          </section> : event.description && <details><summary>Description</summary><p>{event.description}</p></details>}
           {event.canViewRecording && access.permissions.recordings ? <RecordingPlayer key={`${linkId}:${event.id}`} linkId={linkId} eventId={event.id} /> : <p>{event.recordingStatus === 'saving' ? 'Recording is still saving.' : 'No recording available or shared.'}</p>}
         </article>)}
         {cursor && <button disabled={busy} onClick={() => void read(cursor)}>Load more events</button>}
@@ -130,6 +150,7 @@ function RoomCard({ camera, selected, liveAllowed, eventsAllowed, onLive, onEven
     <div className="look-in-camera-body"><h3>{name}</h3><div className="look-in-status-row"><span className={`look-in-status ${camera.status}`}>{status}</span><span>{privacy ? 'Privacy' : paused ? 'Paused' : 'Observing'}</span></div>
       <p>{camera.status === 'offline' ? 'Camera is offline. Live viewing is unavailable.' : camera.status === 'unknown' ? 'Camera connection has not been reported.' : privacy ? 'The senior has enabled Privacy.' : paused ? 'The senior has paused this camera.' : backgrounded ? 'Open Lisa Vision on the camera phone to resume live viewing.' : detectionAttention ? 'Detection needs attention on the camera phone. Live viewing can still be requested.' : 'Available for permitted viewing.'}</p>
       <dl><div><dt>Device</dt><dd>{String(camera.health?.deviceModel || 'Lisa Vision camera')}</dd></div><div><dt>Last check-in</dt><dd>{age(camera.lastSeenISO)}</dd></div>{camera.batteryPercent !== undefined && <div><dt>Battery</dt><dd>{camera.batteryPercent}%</dd></div>}</dl>
+      {camera.inactivityRule?.enabled && <p>Inactivity check-in: {camera.inactivityRule.thresholdMinutes / 60} hours, {camera.inactivityRule.start}–{camera.inactivityRule.end} ({camera.inactivityRule.timeZone}). {camera.inactivityAssessment ? `Latest evaluation: ${camera.inactivityAssessment.reason.replace(/_/g, ' ')}.` : 'Waiting for evaluation.'}</p>}
       <div className="look-in-camera-actions"><button title={`Live look-in: ${name}`} aria-label={`Live look-in: ${name}`} disabled={!liveAllowed || camera.status !== 'online' || backgrounded || privacy || paused} onClick={onLive}><ArrowsOutIcon size={20} /> Live look-in</button><button title={`Events: ${name}`} aria-label={`Events: ${name}`} disabled={!eventsAllowed} onClick={onEvents}><ListBulletsIcon size={20} /> Events</button></div>
     </div>
   </article>;

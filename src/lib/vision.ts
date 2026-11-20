@@ -11,6 +11,8 @@ export type VisionCamera = {
   securityState?: string;
   batteryPercent?: number;
   power?: string;
+  inactivityRule?: { enabled: boolean; start: string; end: string; timeZone: string; thresholdMinutes: number; target: string };
+  inactivityAssessment?: { reason: string; assessedAtISO: string };
   health?: Record<string, string | number | boolean>;
   latestSnapshot?: { url: string; capturedAtISO: string; orientation?: string };
 };
@@ -25,12 +27,14 @@ export type VisionEvent = {
   recordingStatus: 'ready' | 'saving' | 'unavailable';
   canViewRecording: boolean;
   description?: string;
+  insight?: { version: 1; headline: string; observations: string[]; contextLines: string[]; limitations: string[]; evidence: 'SINGLE_IMAGE' | 'MULTIPLE_FRAMES' };
   provenance?: { classifier: string; confidence?: number; timestamp: string };
 };
 
 export type VisionAccess = {
   permissions: { cameraStatus: boolean; eventHistory: boolean; recordings: boolean; liveView: boolean; talk?: boolean };
   cameras: VisionCamera[];
+  inactivityChecks?: { checkId: string; status: string; createdAt: string; responseDueAtISO: string; respondedAtISO?: string; acknowledgedAtISO?: string; canAcknowledge: boolean; notificationState: string; checkInDeliveryState: string; evidence: { cameraId: string; room: string; timeZone: string; windowStartISO: string; windowEndISO: string; lastDetectionISO?: string; target: string }[] }[];
 };
 
 export async function caregiverFetch(path: string, init: RequestInit = {}): Promise<Response> {

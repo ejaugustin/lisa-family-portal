@@ -8,9 +8,9 @@ async function proxy(request: Request, context: Context) {
   if (!await currentCaregiver()) return Response.json({ error: 'unauthorized' }, { status: 401, headers });
   const { linkId, path = [] } = await context.params;
   const route = path.join('/');
-  if (!/^(?:|events|live-sessions(?:\/[a-zA-Z0-9_-]+(?:\/(?:renew|signals))?)?)$/.test(route)) return Response.json({ error: 'not_found' }, { status: 404, headers });
+  if (!/^(?:|events|check-ins\/[a-zA-Z0-9_-]+\/acknowledge|live-sessions(?:\/[a-zA-Z0-9_-]+(?:\/(?:renew|signals))?)?)$/.test(route)) return Response.json({ error: 'not_found' }, { status: 404, headers });
   if (request.method !== 'GET' && !visionMutationOriginAllowed(request)) return Response.json({ error: 'origin_denied' }, { status: 403, headers });
-  if (request.method !== 'GET' && !route.startsWith('live-sessions')) return Response.json({ error: 'method_not_allowed' }, { status: 405, headers });
+  if (request.method !== 'GET' && !route.startsWith('live-sessions') && !/^check-ins\/[a-zA-Z0-9_-]+\/acknowledge$/.test(route)) return Response.json({ error: 'method_not_allowed' }, { status: 405, headers });
   const body = request.method === 'POST' ? await request.text() : undefined;
   if (body && body.length > 80000) return Response.json({ error: 'too_large' }, { status: 413, headers });
   try {
